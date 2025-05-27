@@ -7,39 +7,39 @@ OpticalChange_e RingMech::getOpticalChange() {
     if(!isDetected) {
         if(optical->get_proximity() > OPTICAL_PROXY_MAX) {
             isDetected = true;
-            return OpticalChange_e::DETECTED;
+            return DETECTED;
         }
     }
     else {
         if(optical->get_proximity() < OPTICAL_PROXY_MIN) {
             isDetected = false;
-            return OpticalChange_e::UNDETECTED;
+            return UNDETECTED;
         }
     }
 
-    return OpticalChange_e::IDLE;
+    return NONE;
 }
 
 ArmPosition_e RingMech::getArmPosition() {
     float pos = arm->get_position();
 
     if(std::abs(pos) < ARM_EXIT_ERR) {
-        return ArmPosition_e::HOME;
+        return HOME;
     }
     else if(std::abs(pos - ARM_LOAD_POS) < ARM_EXIT_ERR) {
-        return ArmPosition_e::LOAD;
+        return LOAD;
     }
     else if(std::abs(pos - ARM_HOLD_POS) < ARM_EXIT_ERR) {
-        return ArmPosition_e::HOLD;
+        return HOLD;
     }
     else if(std::abs(pos - ARM_NS_POS) < ARM_EXIT_ERR) {
-        return ArmPosition_e::NEUTRAL;
+        return NEUTRAL;
     }
     else if(std::abs(pos - ARM_AS_POS) < ARM_EXIT_ERR) {
-        return ArmPosition_e::ALLIANCE;
+        return ALLIANCE;
     }
     else {
-        return ArmPosition_e::TRANSITION;
+        return TRANSITION;
     }
 }
 
@@ -48,14 +48,14 @@ void RingMech::updateState() {
     pros::c::optical_direction_e_t gesture = optical->get_gesture();
 
     // handle changes at roller (back of deque)
-    if(opDetect == OpticalChange_e::DETECTED) {
+    if(opDetect == DETECTED) {
         if(gesture == pros::c::UP) {
             float hue = optical->get_hue();
             if(hue > OPTICAL_BLUE_MIN && hue < OPTICAL_BLUE_MAX) {
-                intakeState.push_back({RingColour_e::BLUE, IntakePositon_e::ROLLER});
+                intakeState.push_back({BLUE, ROLLER});
             }
             else if(hue > OPTICAL_RED_MIN && hue < OPTICAL_RED_MAX) {
-                intakeState.push_back({RingColour_e::RED, IntakePositon_e::ROLLER});
+                intakeState.push_back({RED, ROLLER});
             }
             else {
                ; // ignore other hues
@@ -63,17 +63,17 @@ void RingMech::updateState() {
         }
         else if(gesture == pros::c::DOWN) {
             if(!intakeState.empty()) {
-                intakeState.back().position = IntakePositon_e::ROLLER;
+                intakeState.back().position = ROLLER;
             }
         }
         else {
             ; // ignore other gestures
         }
     }
-    else if(opDetect == OpticalChange_e::UNDETECTED) {
+    else if(opDetect == UNDETECTED) {
         if(gesture == pros::c::UP) {
             if(!intakeState.empty()) {
-                intakeState.back().position = IntakePositon_e::CONVEYOR;
+                intakeState.back().position = CONVEYOR;
             }
         }
         else if(gesture == pros::c::DOWN) {
@@ -91,7 +91,7 @@ void RingMech::updateState() {
 
     ArmPosition_e armPos = getArmPosition();
 
-    if(armPos != ArmPosition_e::LOAD && doAntiJam) {
+    if(armPos != LOAD && doAntiJam) {
         antiJam();
     }
 
@@ -99,7 +99,7 @@ void RingMech::updateState() {
     if(limit->get_new_press() && !intakeState.empty()) {
         IntakeRing_s firstRing = intakeState.front();
         
-        if(armPos == ArmPosition_e::LOAD) {
+        if(armPos == LOAD) {
             armState = firstRing.colour;
         }
         else if(doColourSort) {
@@ -114,7 +114,7 @@ void RingMech::updateState() {
 
     // handle arm state if scoring
     // note: assume that ring always exits when arm moves to these positions
-    if(armPos == ArmPosition_e::NEUTRAL || armPos == ArmPosition_e::ALLIANCE) {
-        armState = RingColour_e::NONE;
+    if(armPos == NEUTRAL || armPos == ALLIANCE) {
+        armState = NO_RING;
     }
 }

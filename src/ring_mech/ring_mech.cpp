@@ -6,28 +6,28 @@ static void mainLoopEntry(void *params) {
 }
 
 void RingMech::executeMotion() {
-    MotionStatus_e status = MotionStatus_e::DONE;
+    MotionStatus_e status = DONE;
 
     switch(selectedMotion) {
-        case Motion_e::HOLD_1:
+        case HOLD_1:
             status = hold1();
             break;
-        case Motion_e::HOLD_2_ARM:
+        case HOLD_2_ARM:
             status = hold2Arm();
             break;
-        case Motion_e::HOLD_2:
+        case HOLD_2:
             status = hold2();
             break;
-        case Motion_e::MOGO_LOAD:
+        case MOGO_LOAD:
             status = mogoLoad();
             break;
-        case Motion_e::SCORE_1:
+        case SCORE_1:
             status = score1();
             break;
-        case Motion_e::SCORE_2:
+        case SCORE_2:
             status = score2();
             break;
-        case Motion_e::UNLOAD:
+        case UNLOAD:
             status = unload();
             break;
         default:
@@ -46,17 +46,17 @@ RingMech::RingMech(
     armController(lemlib::PID(ARM_KP, ARM_KI, ARM_KD))
 {
     intakeState.clear();
-    armState = RingColour_e::NONE;
+    armState = NO_RING;
 
     task = nullptr;
 
-    armTargetPosition = ArmPosition_e::HOME;
-    sortOutColour = RingColour_e::BLUE;
+    armTargetPosition = HOME;
+    sortOutColour = BLUE;
     doAntiJam = true;
     doColourSort = true;
 
-    selectedMotion = Motion_e::IDLE;
-    motionStatus = MotionStatus_e::DONE;
+    selectedMotion = IDLE;
+    motionStatus = DONE;
 }
 
 void RingMech::init() {

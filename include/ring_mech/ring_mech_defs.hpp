@@ -40,7 +40,7 @@ enum Motion_e {
 };
 
 enum OpticalChange_e {
-    IDLE = 0,
+    NONE = 0,
     DETECTED,
     UNDETECTED
 };
@@ -55,7 +55,7 @@ enum ArmPosition_e {
 };
 
 enum RingColour_e {
-    NONE = 0,
+    NO_RING = 0,
     BLUE,
     RED
 };

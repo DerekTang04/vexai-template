@@ -3,16 +3,16 @@
 void RingMech::moveArm() {
     int targetCounts = 0;
     switch(armTargetPosition) {
-        case ArmPosition_e::LOAD:
+        case LOAD:
             targetCounts = ARM_LOAD_POS;
             break;
-        case ArmPosition_e::HOLD:
+        case HOLD:
             targetCounts = ARM_HOLD_POS;
             break;
-        case ArmPosition_e::NEUTRAL:
+        case NEUTRAL:
             targetCounts = ARM_NS_POS;
             break;
-        case ArmPosition_e::ALLIANCE:
+        case ALLIANCE:
             targetCounts = ARM_AS_POS;
             break;
         default:
