@@ -1,9 +1,12 @@
 #pragma once
 
+#include "pros/motor_group.hpp"
 #include "pros/rtos.hpp"
 #include "pros/imu.hpp"
 #include "lemlib/asset.hpp"
-#include "lemlib/chassis/trackingWheel.hpp"
+#include "lemlib/chassis/odometry_pod.hpp"
+#include "lemlib/chassis/calibrated_imu.hpp"
+#include "lemlib/chassis/calibrated_gps.hpp"
 #include "lemlib/pose.hpp"
 #include "lemlib/pid.hpp"
 #include "lemlib/exitcondition.hpp"
@@ -16,37 +19,12 @@ namespace lemlib {
  */
 class OdomSensors {
     public:
-        /**
-         * The sensors are stored in a class so that they can be easily passed to the chassis class
-         * The variables are pointers so that they can be set to nullptr if they are not used
-         * Otherwise the chassis class would have to have a constructor for each possible combination of sensors
-         *
-         * @param vertical1 pointer to the first vertical tracking wheel
-         * @param vertical2 pointer to the second vertical tracking wheel
-         * @param horizontal1 pointer to the first horizontal tracking wheel
-         * @param horizontal2 pointer to the second horizontal tracking wheel
-         * @param imu pointer to the IMU
-         *
-         * @b Example
-         * @code {.cpp}
-         * pros::Rotation vertical_rotation(1); // rotation sensor on port 1
-         * pros::Imu imu(2); // IMU on port 2
-         * // tracking wheel using a new 2.75" wheel, 0.5 inches to the right of the tracking center
-         * lemlib::TrackingWheel vertical1(&vertical_rotation, lemlib::Omniwheel::NEW_275, 0.5);
-         * lemlib::OdomSensors sensors(&vertical1, // vertical tracking wheel
-         *                     nullptr, // no second vertical tracking wheel, set to nullptr
-         *                     nullptr, // no horizontal tracking wheels, set to nullptr
-         *                     nullptr, // no second horizontal tracking wheel, set to nullptr
-         *                     &imu); // IMU
-         * @endcode
-         */
-        OdomSensors(TrackingWheel* vertical1, TrackingWheel* vertical2, TrackingWheel* horizontal1,
-                    TrackingWheel* horizontal2, pros::Imu* imu);
-        TrackingWheel* vertical1;
-        TrackingWheel* vertical2;
-        TrackingWheel* horizontal1;
-        TrackingWheel* horizontal2;
-        pros::Imu* imu;
+        OdometryPod *hPod;
+        OdometryPod *vPod;
+        CalibratedImu *imu;
+        CalibratedGps *gps;
+
+        OdomSensors(OdometryPod *hPod, OdometryPod *vPod, CalibratedImu *imu, CalibratedGps *gps);
 };
 
 /**
@@ -115,6 +93,11 @@ class ControllerSettings {
  */
 class Drivetrain {
     public:
+        pros::MotorGroup* leftMotors;
+        pros::MotorGroup* rightMotors;
+        float trackWidth;
+        float horizontalDrift;
+
         /**
          * @brief Drivetrain constructor
          *
@@ -125,8 +108,6 @@ class Drivetrain {
          * @param rightMotors pointer to the right motors
          * @param trackWidth the track width of the robot, in inches. This is the distance from the left wheels to the
          * right wheels
-         * @param wheelDiameter the diameter of the wheel used on the drivetrain, in inches
-         * @param rpm the rpm of the wheels
          * @param horizontalDrift higher values make the robot move faster but causes more overshoot on turns.
          * Recommended value of 2 if not using traction wheels, 8 if using traction wheels
          *
@@ -152,14 +133,7 @@ class Drivetrain {
          *                               2); // horizontalDrift is 2. If we had traction wheels, it would have been 8
          * @endcode
          */
-        Drivetrain(pros::MotorGroup* leftMotors, pros::MotorGroup* rightMotors, float trackWidth, float wheelDiameter,
-                   float rpm, float horizontalDrift);
-        pros::MotorGroup* leftMotors;
-        pros::MotorGroup* rightMotors;
-        float trackWidth;
-        float wheelDiameter;
-        float rpm;
-        float horizontalDrift;
+        Drivetrain(pros::MotorGroup* leftMotors, pros::MotorGroup* rightMotors, float trackWidth, float horizontalDrift);
 };
 
 /**
@@ -367,7 +341,7 @@ class Chassis {
          * }
          * @endcode
          */
-        void calibrate(bool calibrateIMU = true);
+        void calibrate(Pose initialPose);
         /**
          * @brief Set the pose of the chassis
          *
