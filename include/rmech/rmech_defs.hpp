@@ -23,11 +23,6 @@ const int ARM_HOLD_POS = 700;
 const int ARM_NS_POS   = 1000;
 const int ARM_AS_POS   = 1500;
 
-enum MotionStatus_e {
-    DONE = 0,
-    BUSY
-};
-
 enum Motion_e {
     IDLE = 0,
     HOLD_1,
