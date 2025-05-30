@@ -43,8 +43,6 @@ private:
 
     void moveArm();
 
-    void update();
-
 public:
     RingColour_e sortOutColour;
     bool doAntiJam;
@@ -70,5 +68,5 @@ public:
     bool isArmMoving();
 
     // note: do not call directly
-    void mainLoop();
+    void update();
 };

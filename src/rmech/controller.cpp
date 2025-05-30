@@ -1,8 +1,13 @@
 #include "rmech/controller.hpp"
 
-static void mainLoopEntry(void *params) {
+static void updateEntry(void *params) {
     RingMechController *c = static_cast<RingMechController*>(params);
-    c->mainLoop();
+    
+    uint32_t lastRunTime = pros::millis();
+    while(true) {
+        c->update();
+        pros::Task::delay_until(&lastRunTime, 10);
+    }
 }
 
 OpticalChange_e RingMechController::getOpticalChange() {
@@ -124,6 +129,72 @@ void RingMechController::moveArm() {
     }
 }
 
+RingMechController::RingMechController(
+    pros::Motor *roller, pros::Motor *conveyor, pros::Motor *arm, 
+    pros::Optical *optical, pros::adi::DigitalIn *limit,
+    lemlib::PID *armController
+) :
+    roller(roller), conveyor(conveyor), arm(arm),
+    optical(optical), limit(limit),
+    armController(armController)
+{
+    controllerTask = nullptr;
+
+    intakeState.clear();
+    armState = NO_RING;
+    conveyorStalled = false;
+    armMoving = false;
+
+    sortOutColour = BLUE;
+    doAntiJam = true;
+    doColourSort = true;
+    rollerTargetVoltage = 0;
+    conveyorTargetVoltage = 0;
+    armTargetPosition = HOME;
+}
+
+void RingMechController::init() {
+    // set up optical sensor
+    optical->enable_gesture();
+    optical->set_integration_time(OPTICAL_INT_TIME);
+    optical->set_led_pwm(OPTICAL_LED_PWM);
+
+    // set motor brake modes
+    roller->set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+    conveyor->set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+    arm->set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+
+    // move arm to bottom position
+    arm->move_voltage(-MOTOR_VOLTAGE_MAX/5);
+    pros::delay(1000);
+    while(std::abs(arm->get_actual_velocity()) > 5) {
+        pros::delay(10);
+    }
+    arm->brake();
+
+    // zero arm encoder
+    arm->tare_position();
+
+    // start task
+    controllerTask = std::make_unique<pros::Task>(updateEntry, this, "Ring Mech Controller Task");
+}
+
+std::deque<IntakeRing_s> RingMechController::getIntakeState() {
+    return intakeState;
+}
+
+RingColour_e RingMechController::getArmState() {
+    return armState;
+}
+
+bool RingMechController::isConveyorStalled() {
+    return conveyorStalled;
+}
+
+bool RingMechController::isArmMoving() {
+    return armMoving;
+}
+
 void RingMechController::update() {
     /* handle changes at bottom (back of deque) */
     OpticalChange_e opDetect = getOpticalChange();
@@ -198,78 +269,4 @@ void RingMechController::update() {
     moveRoller();
     moveConveyor();
     moveArm();
-}
-
-RingMechController::RingMechController(
-    pros::Motor *roller, pros::Motor *conveyor, pros::Motor *arm, 
-    pros::Optical *optical, pros::adi::DigitalIn *limit,
-    lemlib::PID *armController
-) :
-    roller(roller), conveyor(conveyor), arm(arm),
-    optical(optical), limit(limit),
-    armController(armController)
-{
-    controllerTask = nullptr;
-
-    intakeState.clear();
-    armState = NO_RING;
-    conveyorStalled = false;
-    armMoving = false;
-
-    sortOutColour = BLUE;
-    doAntiJam = true;
-    doColourSort = true;
-    rollerTargetVoltage = 0;
-    conveyorTargetVoltage = 0;
-    armTargetPosition = HOME;
-}
-
-void RingMechController::init() {
-    // set up optical sensor
-    optical->enable_gesture();
-    optical->set_integration_time(OPTICAL_INT_TIME);
-    optical->set_led_pwm(OPTICAL_LED_PWM);
-
-    // set motor brake modes
-    roller->set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
-    conveyor->set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
-    arm->set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-
-    // move arm to bottom position
-    arm->move_voltage(-MOTOR_VOLTAGE_MAX/5);
-    pros::delay(1000);
-    while(std::abs(arm->get_actual_velocity()) > 5) {
-        pros::delay(10);
-    }
-    arm->brake();
-
-    // zero arm encoder
-    arm->tare_position();
-
-    // start task
-    controllerTask = std::make_unique<pros::Task>(mainLoopEntry, this, "Ring Mech Controller Task");
-}
-
-std::deque<IntakeRing_s> RingMechController::getIntakeState() {
-    return intakeState;
-}
-
-RingColour_e RingMechController::getArmState() {
-    return armState;
-}
-
-bool RingMechController::isConveyorStalled() {
-    return conveyorStalled;
-}
-
-bool RingMechController::isArmMoving() {
-    return armMoving;
-}
-
-void RingMechController::mainLoop() {
-    uint32_t lastRunTime = pros::millis();
-    while(true) {
-        update();
-        pros::Task::delay_until(&lastRunTime, 10);
-    }
 }
