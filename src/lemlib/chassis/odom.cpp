@@ -44,27 +44,20 @@ void lemlib::update(void *params) {
     float prevHorizontal = odomSensors.hPod->getDistance();
     float prevVertical   = odomSensors.vPod->getDistance();
 
-    uint32_t prevRunTime = pros::millis();
+    uint32_t taskRunTime = pros::millis();
+    uint32_t gpsFusionTime = taskRunTime;
     while(true)
     {
-        /* get sensor data*/
-        // get sensor readings for odometry
         float rotationDeg = odomSensors.imu->getTotalRotation();
         float rotation    = degToRad(rotationDeg);
         float horizontal  = odomSensors.hPod->getDistance();
         float vertical    = odomSensors.vPod->getDistance();
 
-        // get sensor readings for gps fusion
-        float gyroYawRate  = odomSensors.imu->getYawRate();
-        GpsPosition gpsPos = odomSensors.gps->getPosition(rotationDeg);
-
-        /* math for odometry */
-        // find deltas
         float deltaRotation   = rotation - prevRotation;
         float deltaHorizontal = horizontal - prevHorizontal;
         float deltaVertical   = vertical - prevVertical;
 
-        // calculate local displacement
+        // get local odometry displacements
         float localX = 0;
         float localY = 0;
         if(deltaRotation == 0)
@@ -78,42 +71,43 @@ void lemlib::update(void *params) {
             localY = 2 * sin(deltaRotation / 2) * (deltaVertical / deltaRotation + odomSensors.vPod->getOffset());
         }
 
-        // calculate global displacement
+        // convert local odometry displacements to global ones
         float dispDir = prevRotation + deltaRotation / 2;
         float dispX = localY * sin(dispDir) + localX * cos(dispDir);
         float dispY = localY * cos(dispDir) - localX * sin(dispDir);
 
-        /* math for gps fusion */
-        // find velocities and gain
-        float linearVelocity  = sqrt( pow(dispX / 0.01, 2) + pow(dispY / 0.01, 2) );
-        float angularVelocity = fabs(gyroYawRate);
-        float gain = odomSensors.gps->getGain(linearVelocity, angularVelocity);
-
-        /* updating the pose */
         poseMutex.lock();
 
-        // predict position with odometry
+        // predict pose with odometry
         odomPose.x += dispX;
-        odomPose.y += dispY;
-
-        // innovate position with gps
-        if(gpsPos.rmsError < 1 && gain > 0)
-        {
-            odomPose.x = odomPose.x + gain * (gpsPos.pos.x - odomPose.x);
-            odomPose.y = odomPose.y + gain * (gpsPos.pos.y - odomPose.y);
-        }
-        
-        // update heading
+        odomPose.y += dispY; 
         odomPose.theta = sanitizeAngle(rotation);
-        
+
+        // update pose with gps
+        if(pros::millis() >= gpsFusionTime)
+        {
+            gpsFusionTime += 100;
+
+            float gyroYawRate  = odomSensors.imu->getYawRate();
+            GpsPosition gpsPos = odomSensors.gps->getPosition(rotationDeg);
+            float linearVelocity  = sqrt( pow(dispX / 0.01, 2) + pow(dispY / 0.01, 2) );
+            float angularVelocity = fabs(gyroYawRate);
+            float gain = odomSensors.gps->getGain(linearVelocity, angularVelocity);
+
+            if(gpsPos.rmsError < 1 && gain > 0)
+            {
+                odomPose.x = odomPose.x + gain * (gpsPos.pos.x - odomPose.x);
+                odomPose.y = odomPose.y + gain * (gpsPos.pos.y - odomPose.y);
+            }
+        }
+
         poseMutex.unlock();
 
-        /* misc chores */
         prevRotation   = rotation; 
         prevHorizontal = horizontal;
         prevVertical   = vertical;
 
-        pros::Task::delay_until(&prevRunTime, 10);
+        pros::Task::delay_until(&taskRunTime, 10);
     }
 }
 

@@ -57,7 +57,7 @@ float lemlib::CalibratedGps::getGain(float linearVelocity, float angularVelocity
 
     if(rawGain > 0)
     {
-        return 0.03 * rawGain;
+        return 0.5 * rawGain;
     }
     else
     {
