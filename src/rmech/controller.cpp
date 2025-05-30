@@ -79,6 +79,7 @@ void RingMechController::runAntiJam() {
     if(conveyorStalled) {
         conveyor->move_voltage(-MOTOR_VOLTAGE_MAX);
         pros::delay(65);
+        conveyor->move_voltage(std::clamp(conveyorTargetVoltage, -MOTOR_VOLTAGE_MAX, MOTOR_VOLTAGE_MAX));
     }
 }
 
@@ -86,6 +87,7 @@ void RingMechController::runColourSort(RingColour_e ringColour) {
     if(ringColour == sortOutColour) {
         conveyor->move_voltage(-MOTOR_VOLTAGE_MAX);
         pros::delay(300);
+        conveyor->move_voltage(std::clamp(conveyorTargetVoltage, -MOTOR_VOLTAGE_MAX, MOTOR_VOLTAGE_MAX));
     }
 }
 
@@ -245,16 +247,17 @@ void RingMechController::update() {
     getConveyorStalled();
 
     if(getArmPositon() != LOAD) {
-        if(doAntiJam) {
-            runAntiJam();
-        }
-
         if(limit->get_new_press() && !intakeState.empty())
         {
             if(doColourSort) {
                 runColourSort(intakeState.front().colour);
             }
             intakeState.pop_front();
+        }
+        else {
+            if(doAntiJam) {
+                runAntiJam();
+            }
         }
     }
     else {
