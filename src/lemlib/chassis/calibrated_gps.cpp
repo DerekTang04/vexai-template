@@ -14,9 +14,11 @@ pros::gps_position_s_t lemlib::CalibratedGps::transformOffsets(float heading)
     return transformed;
 }
 
-lemlib::CalibratedGps::CalibratedGps(pros::Gps sensor, 
+lemlib::CalibratedGps::CalibratedGps(
+    pros::Gps sensor, 
     float xOffset, float yOffset, float headingOffset, 
-    float linearVelocityLimit, float angularVelocityLimit) :
+    float linearVelocityLimit, float angularVelocityLimit
+) : 
     sensor(sensor), 
     xOffset(xOffset), yOffset(yOffset), headingOffset(headingOffset),
     linearVelocityLimit(linearVelocityLimit), angularVelocityLimit(angularVelocityLimit) {}
